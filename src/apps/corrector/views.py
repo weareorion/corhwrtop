@@ -161,23 +161,81 @@ def session_upload(request):
 
 def session_review(request, session_id):
     session = get_object_or_404(UploadSession, pk=session_id)
-    entries = session.entries.select_related(
-        "suggestion__suggested_reference",
-        "suggestion__confirmed_reference",
+    entries = list(
+        session.entries.select_related(
+            "suggestion__suggested_reference",
+            "suggestion__confirmed_reference",
+        ).order_by("row_index")
     )
+    ref_products = list(ReferenceProduct.objects.order_by("product_name"))
+
+    total = len(entries)
+    confirmed_count = sum(
+        1 for e in entries
+        if hasattr(e, "suggestion") and e.suggestion.status == CorrectionSuggestion.Status.CONFIRMED
+    )
+    rejected_count = sum(
+        1 for e in entries
+        if hasattr(e, "suggestion") and e.suggestion.status == CorrectionSuggestion.Status.REJECTED
+    )
+    pending_count = total - confirmed_count - rejected_count
+
     return render(request, "corrector/session_review.html", {
         "session": session,
         "entries": entries,
+        "ref_products": ref_products,
+        "total": total,
+        "confirmed_count": confirmed_count,
+        "rejected_count": rejected_count,
+        "pending_count": pending_count,
     })
 
 
 def confirm_entry(request, session_id, entry_id):
-    """Stub — implemented in the review/confirm task."""
-    return redirect("corrector:session_review", session_id=session_id)
+    session = get_object_or_404(UploadSession, pk=session_id)
+    entry = get_object_or_404(RawEntry, pk=entry_id, session=session)
+    suggestion = get_object_or_404(CorrectionSuggestion, entry=entry)
+
+    if request.method == "POST":
+        action = request.POST.get("action", "confirm")
+
+        if action == "confirm":
+            suggestion.status = CorrectionSuggestion.Status.CONFIRMED
+            suggestion.confirmed_reference = suggestion.suggested_reference
+            suggestion.save()
+        elif action == "reject":
+            suggestion.status = CorrectionSuggestion.Status.REJECTED
+            suggestion.confirmed_reference = None
+            suggestion.save()
+        elif action == "override":
+            ref_id = request.POST.get("reference_id", "").strip()
+            if ref_id:
+                ref = get_object_or_404(ReferenceProduct, pk=ref_id)
+                suggestion.status = CorrectionSuggestion.Status.CONFIRMED
+                suggestion.confirmed_reference = ref
+                suggestion.save()
+
+    ref_products = list(ReferenceProduct.objects.order_by("product_name"))
+    return render(request, "corrector/_entry_row.html", {
+        "session": session,
+        "entry": entry,
+        "suggestion": suggestion,
+        "ref_products": ref_products,
+    })
 
 
 def confirm_all(request, session_id):
-    """Stub — implemented in the review/confirm task."""
+    session = get_object_or_404(UploadSession, pk=session_id)
+    if request.method == "POST":
+        pending = CorrectionSuggestion.objects.filter(
+            entry__session=session,
+            status=CorrectionSuggestion.Status.PENDING,
+            suggested_reference__isnull=False,
+        ).select_related("suggested_reference")
+        for sugg in pending:
+            sugg.status = CorrectionSuggestion.Status.CONFIRMED
+            sugg.confirmed_reference = sugg.suggested_reference
+            sugg.save()
     return redirect("corrector:session_review", session_id=session_id)
 
 

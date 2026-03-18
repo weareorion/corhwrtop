@@ -3,23 +3,37 @@
 {% block title %}Review: {{ session.name }} — CSV Corrector{% endblock %}
 
 {% block content %}
-<div class="max-w-6xl mx-auto px-6 py-10">
+<div class="max-w-7xl mx-auto px-6 py-10">
 
-  {# ── Breadcrumb nav ── #}
+  {# ── Breadcrumb ── #}
   <div class="mb-8 text-sm opacity-50">
     <a href="{% url 'corrector:dashboard' %}" class="hover:opacity-100 transition">Dashboard</a>
     <span class="mx-1.5">→</span>
     <span>{{ session.name }}</span>
   </div>
 
-  <div class="flex items-start justify-between mb-8">
+  {# ── Header row ── #}
+  <div class="flex items-start justify-between mb-8 gap-4 flex-wrap">
     <div>
       <h1 class="text-xl font-semibold tracking-tight mb-1">{{ session.name }}</h1>
       <p class="text-sm opacity-50">
-        {{ entries|length }} row{{ entries|length|pluralize }} · created {{ session.created_at|date:"Y-m-d H:i" }}
+        {{ total }} row{{ total|pluralize }} · created {{ session.created_at|date:"Y-m-d H:i" }}
       </p>
     </div>
-    <div class="flex gap-3">
+    <div class="flex gap-3 items-center flex-wrap">
+
+      {# Confirm all pending — regular POST, reloads page #}
+      {% if pending_count %}
+      <form method="post" action="{% url 'corrector:confirm_all' session.pk %}">
+        {% csrf_token %}
+        <button type="submit"
+                class="px-4 py-2 text-sm bg-ink text-white rounded hover:opacity-80 transition"
+                onclick="return confirm('Confirm all {{ pending_count }} pending suggestion{{ pending_count|pluralize }}?')">
+          Confirm all pending ({{ pending_count }})
+        </button>
+      </form>
+      {% endif %}
+
       <a href="{% url 'corrector:session_export' session.pk %}"
          class="px-4 py-2 text-sm border border-border rounded bg-white hover:bg-surface transition">
         Export CSV
@@ -27,14 +41,53 @@
     </div>
   </div>
 
-  {# ── Placeholder for the review table (implemented in a later task) ── #}
-  <div class="bg-white border border-border rounded p-8 text-center text-sm opacity-50">
-    <p class="mb-2 font-medium">Review table coming soon</p>
-    <p>This session has {{ entries|length }} entr{{ entries|length|pluralize:"y,ies" }} ready to review.</p>
-    <p class="mt-4">
-      <a href="{% url 'corrector:dashboard' %}" class="underline">← Back to dashboard</a>
-    </p>
+  {# ── Stats cards ── #}
+  <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-8">
+    <div class="bg-white border border-border rounded p-4">
+      <p class="text-xs opacity-50 mb-1">Total rows</p>
+      <p class="text-2xl font-semibold">{{ total }}</p>
+    </div>
+    <div class="bg-white border border-border rounded p-4">
+      <p class="text-xs opacity-50 mb-1">Confirmed</p>
+      <p class="text-2xl font-semibold text-green-700">{{ confirmed_count }}</p>
+    </div>
+    <div class="bg-white border border-border rounded p-4">
+      <p class="text-xs opacity-50 mb-1">Pending review</p>
+      <p class="text-2xl font-semibold text-amber-600">{{ pending_count }}</p>
+    </div>
+    <div class="bg-white border border-border rounded p-4">
+      <p class="text-xs opacity-50 mb-1">Rejected</p>
+      <p class="text-2xl font-semibold text-red-600">{{ rejected_count }}</p>
+    </div>
   </div>
+
+  {# ── Review table ── #}
+  {% if entries %}
+  <div class="bg-white border border-border rounded overflow-x-auto">
+    <table class="w-full text-sm">
+      <thead>
+        <tr class="border-b border-border bg-surface text-xs uppercase tracking-wider opacity-60">
+          <th class="text-left px-4 py-3 font-medium w-10">#</th>
+          <th class="text-left px-4 py-3 font-medium">Raw product name</th>
+          <th class="text-left px-4 py-3 font-medium">Suggested name</th>
+          <th class="text-left px-4 py-3 font-medium">Product code</th>
+          <th class="text-left px-4 py-3 font-medium">Confidence</th>
+          <th class="text-left px-4 py-3 font-medium">Status</th>
+          <th class="text-left px-4 py-3 font-medium">Action</th>
+        </tr>
+      </thead>
+      <tbody id="review-table-body">
+        {% for entry in entries %}
+          {% include "corrector/_entry_row.html" with suggestion=entry.suggestion %}
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="text-center py-24 text-sm opacity-40">
+    No entries found in this session.
+  </div>
+  {% endif %}
 
 </div>
 {% endblock %}
