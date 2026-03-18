@@ -1,0 +1,107 @@
+{% extends "base.html" %}
+
+{% block title %}Reference Catalog — CSV Corrector{% endblock %}
+
+{% block content %}
+<div class="max-w-2xl mx-auto px-6 py-10">
+
+  {# ── Breadcrumb nav ── #}
+  <div class="mb-8 text-sm opacity-50">
+    <a href="{% url 'corrector:dashboard' %}" class="hover:opacity-100 transition">Dashboard</a>
+    <span class="mx-1.5">→</span>
+    <span>Reference catalog</span>
+  </div>
+
+  <h1 class="text-xl font-semibold tracking-tight mb-1">Reference catalog</h1>
+  <p class="text-sm opacity-50 mb-8">
+    {% if ref_count %}
+      {{ ref_count }} product{{ ref_count|pluralize }} loaded. Upload a new CSV to add or update records.
+    {% else %}
+      No products loaded yet. Upload a CSV to populate the catalog.
+    {% endif %}
+  </p>
+
+  {# ── Messages ── #}
+  {% for message in messages %}
+  <div class="mb-6 px-4 py-3 rounded text-sm
+    {% if message.tags == 'success' %}bg-green-50 border border-green-200 text-green-800
+    {% else %}bg-red-50 border border-red-200 text-red-800{% endif %}">
+    {{ message }}
+  </div>
+  {% endfor %}
+
+  {# ── Upload form ── #}
+  <div class="bg-white border border-border rounded p-6 mb-8">
+    <form method="post" enctype="multipart/form-data" novalidate>
+      {% csrf_token %}
+
+      <div class="mb-5">
+        <label class="block text-xs font-medium uppercase tracking-wider opacity-60 mb-1.5">
+          {{ form.csv_file.label }}
+        </label>
+        {{ form.csv_file }}
+        {% if form.csv_file.errors %}
+          {% for err in form.csv_file.errors %}
+          <p class="mt-1.5 text-xs text-red-600">{{ err }}</p>
+          {% endfor %}
+        {% else %}
+          <p class="mt-1.5 text-xs opacity-40">{{ form.csv_file.help_text }}</p>
+        {% endif %}
+      </div>
+
+      <button type="submit"
+              class="px-5 py-2 text-sm bg-ink text-white rounded hover:opacity-80 transition">
+        Upload & sync
+      </button>
+    </form>
+  </div>
+
+  {# ── Format reference ── #}
+  <div class="border border-border rounded p-5 text-sm">
+    <p class="font-medium mb-3">Expected CSV format</p>
+    <div class="overflow-x-auto">
+      <table class="text-xs w-full">
+        <thead>
+          <tr class="border-b border-border">
+            <th class="text-left py-1.5 pr-6 font-medium opacity-60">product_code</th>
+            <th class="text-left py-1.5 font-medium opacity-60">product_name</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr class="border-b border-border opacity-50">
+            <td class="py-1.5 pr-6">SKU-001</td>
+            <td class="py-1.5">Widget Alpha</td>
+          </tr>
+          <tr class="opacity-50">
+            <td class="py-1.5 pr-6">SKU-002</td>
+            <td class="py-1.5">Gadget Beta Pro</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <ul class="mt-4 space-y-1 text-xs opacity-50 list-disc list-inside">
+      <li>Column names are case-insensitive and leading/trailing spaces are stripped</li>
+      <li>Additional columns are ignored</li>
+      <li>Existing records are updated by <code>product_code</code>; new ones are inserted</li>
+      <li>File must be UTF-8 encoded (Excel: save as "CSV UTF-8")</li>
+    </ul>
+  </div>
+
+</div>
+
+{% block extra_scripts %}
+<style>
+  input[type="file"] {
+    display: block;
+    width: 100%;
+    padding: 0.5rem 0.75rem;
+    border: 1px solid #e0e0e0;
+    border-radius: 0.375rem;
+    background: #fafafa;
+    font-family: inherit;
+    font-size: 0.875rem;
+  }
+</style>
+{% endblock %}
+
+{% endblock %}

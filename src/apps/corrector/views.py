@@ -1,0 +1,186 @@
+import csv
+import io
+
+from django.contrib import messages
+from django.shortcuts import get_object_or_404, redirect, render
+
+from .forms import ReferenceUploadForm, SessionUploadForm
+from .models import CorrectionSuggestion, RawEntry, ReferenceProduct, UploadSession
+from .utils.matcher import auto_confirm_threshold, find_best_match
+
+
+def dashboard(request):
+    sessions = UploadSession.objects.all()
+    ref_count = ReferenceProduct.objects.count()
+    return render(request, "corrector/dashboard.html", {
+        "sessions": sessions,
+        "ref_count": ref_count,
+    })
+
+
+def reference_upload(request):
+    form = ReferenceUploadForm()
+    ref_count = ReferenceProduct.objects.count()
+
+    if request.method == "POST":
+        form = ReferenceUploadForm(request.POST, request.FILES)
+        if form.is_valid():
+            csv_file = form.cleaned_data["csv_file"]
+            try:
+                decoded = csv_file.read().decode("utf-8-sig")
+            except UnicodeDecodeError:
+                form.add_error("csv_file", "Could not decode file — upload a UTF-8 CSV.")
+            else:
+                reader = csv.DictReader(io.StringIO(decoded))
+                fieldnames = [f.strip().lower() for f in (reader.fieldnames or [])]
+
+                if "product_code" not in fieldnames or "product_name" not in fieldnames:
+                    form.add_error(
+                        "csv_file",
+                        "CSV must have 'product_code' and 'product_name' columns.",
+                    )
+                else:
+                    created_count = updated_count = skipped_count = 0
+                    for row in reader:
+                        norm = {k.strip().lower(): v.strip() for k, v in row.items()}
+                        code = norm.get("product_code", "").strip()
+                        name = norm.get("product_name", "").strip()
+                        if not code:
+                            skipped_count += 1
+                            continue
+                        _, was_created = ReferenceProduct.objects.update_or_create(
+                            product_code=code,
+                            defaults={"product_name": name},
+                        )
+                        if was_created:
+                            created_count += 1
+                        else:
+                            updated_count += 1
+
+                    parts = []
+                    if created_count:
+                        parts.append(f"{created_count} added")
+                    if updated_count:
+                        parts.append(f"{updated_count} updated")
+                    if skipped_count:
+                        parts.append(f"{skipped_count} skipped (empty code)")
+                    messages.success(
+                        request,
+                        "Reference catalog updated: " + ", ".join(parts) + "."
+                        if parts
+                        else "Reference catalog unchanged.",
+                    )
+                    return redirect("corrector:reference_upload")
+
+        ref_count = ReferenceProduct.objects.count()
+
+    return render(request, "corrector/reference_upload.html", {
+        "form": form,
+        "ref_count": ref_count,
+    })
+
+
+def session_upload(request):
+    form = SessionUploadForm()
+    ref_count = ReferenceProduct.objects.count()
+
+    if request.method == "POST":
+        form = SessionUploadForm(request.POST, request.FILES)
+        if form.is_valid():
+            csv_file = form.cleaned_data["csv_file"]
+            session_name = form.cleaned_data["name"]
+            threshold = form.cleaned_data["confidence_threshold"]
+
+            try:
+                decoded = csv_file.read().decode("utf-8-sig")
+            except UnicodeDecodeError:
+                form.add_error("csv_file", "Could not decode file — upload a UTF-8 CSV.")
+            else:
+                reader = csv.DictReader(io.StringIO(decoded))
+                fieldnames = reader.fieldnames or []
+                lower_map = {orig: orig.strip().lower() for orig in fieldnames}
+                lower_names = list(lower_map.values())
+
+                if "product_name" not in lower_names:
+                    form.add_error("csv_file", "CSV must contain a 'product_name' column.")
+                else:
+                    # Original header key whose lowercased form is "product_name"
+                    product_name_col = next(
+                        orig for orig, norm in lower_map.items() if norm == "product_name"
+                    )
+                    rows = list(reader)
+
+                    if not rows:
+                        form.add_error("csv_file", "The CSV file contains no data rows.")
+                    else:
+                        # Pre-fetch reference catalog once to avoid N queries in loop
+                        ref_products = list(ReferenceProduct.objects.all())
+
+                        session = UploadSession.objects.create(
+                            name=session_name,
+                            status=UploadSession.Status.REVIEWING,
+                        )
+
+                        for idx, row in enumerate(rows):
+                            product_name = row.get(product_name_col, "").strip()
+                            extra = {
+                                lower_map[k]: v
+                                for k, v in row.items()
+                                if lower_map.get(k) != "product_name"
+                            }
+
+                            entry = RawEntry.objects.create(
+                                session=session,
+                                row_index=idx,
+                                product_name=product_name,
+                                extra_data=extra,
+                            )
+
+                            best_ref, score = find_best_match(product_name, ref_products)
+                            is_confirmed = bool(best_ref) and auto_confirm_threshold(score, threshold)
+                            status = (
+                                CorrectionSuggestion.Status.CONFIRMED
+                                if is_confirmed
+                                else CorrectionSuggestion.Status.PENDING
+                            )
+                            CorrectionSuggestion.objects.create(
+                                entry=entry,
+                                suggested_reference=best_ref,
+                                confidence=score,
+                                status=status,
+                                confirmed_reference=best_ref if is_confirmed else None,
+                            )
+
+                        return redirect("corrector:session_review", session_id=session.pk)
+
+    return render(request, "corrector/session_upload.html", {
+        "form": form,
+        "ref_count": ref_count,
+    })
+
+
+def session_review(request, session_id):
+    session = get_object_or_404(UploadSession, pk=session_id)
+    entries = session.entries.select_related(
+        "suggestion__suggested_reference",
+        "suggestion__confirmed_reference",
+    )
+    return render(request, "corrector/session_review.html", {
+        "session": session,
+        "entries": entries,
+    })
+
+
+def confirm_entry(request, session_id, entry_id):
+    """Stub — implemented in the review/confirm task."""
+    return redirect("corrector:session_review", session_id=session_id)
+
+
+def confirm_all(request, session_id):
+    """Stub — implemented in the review/confirm task."""
+    return redirect("corrector:session_review", session_id=session_id)
+
+
+def session_export(request, session_id):
+    """Stub — implemented in the export task."""
+    return redirect("corrector:session_review", session_id=session_id)

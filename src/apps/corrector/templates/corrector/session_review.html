@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+
+{% block title %}Review: {{ session.name }} — CSV Corrector{% endblock %}
+
+{% block content %}
+<div class="max-w-6xl mx-auto px-6 py-10">
+
+  {# ── Breadcrumb nav ── #}
+  <div class="mb-8 text-sm opacity-50">
+    <a href="{% url 'corrector:dashboard' %}" class="hover:opacity-100 transition">Dashboard</a>
+    <span class="mx-1.5">→</span>
+    <span>{{ session.name }}</span>
+  </div>
+
+  <div class="flex items-start justify-between mb-8">
+    <div>
+      <h1 class="text-xl font-semibold tracking-tight mb-1">{{ session.name }}</h1>
+      <p class="text-sm opacity-50">
+        {{ entries|length }} row{{ entries|length|pluralize }} · created {{ session.created_at|date:"Y-m-d H:i" }}
+      </p>
+    </div>
+    <div class="flex gap-3">
+      <a href="{% url 'corrector:session_export' session.pk %}"
+         class="px-4 py-2 text-sm border border-border rounded bg-white hover:bg-surface transition">
+        Export CSV
+      </a>
+    </div>
+  </div>
+
+  {# ── Placeholder for the review table (implemented in a later task) ── #}
+  <div class="bg-white border border-border rounded p-8 text-center text-sm opacity-50">
+    <p class="mb-2 font-medium">Review table coming soon</p>
+    <p>This session has {{ entries|length }} entr{{ entries|length|pluralize:"y,ies" }} ready to review.</p>
+    <p class="mt-4">
+      <a href="{% url 'corrector:dashboard' %}" class="underline">← Back to dashboard</a>
+    </p>
+  </div>
+
+</div>
+{% endblock %}
