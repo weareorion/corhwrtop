@@ -1,0 +1,50 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}CSV Corrector{% endblock %}</title>
+
+  {# JetBrains Mono — used for all text #}
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+  {# Tailwind CSS — CDN play script (swap for compiled output in production) #}
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            mono: ['"JetBrains Mono"', 'ui-monospace', 'monospace'],
+          },
+          colors: {
+            surface: '#f5f5f5',
+            border:  '#e0e0e0',
+            ink:     '#1a1a1a',
+          },
+        },
+      },
+    }
+  </script>
+
+  <style>
+    body { font-family: 'JetBrains Mono', ui-monospace, monospace; }
+  </style>
+
+  {% block extra_head %}{% endblock %}
+</head>
+<body class="bg-surface text-ink min-h-screen">
+
+  {% block content %}{% endblock %}
+
+  {# HTMX #}
+  <script src="{% static 'js/htmx.min.js' %}" defer></script>
+  {# Alpine.js #}
+  <script src="{% static 'js/alpine.min.js' %}" defer></script>
+
+  {% block extra_scripts %}{% endblock %}
+</body>
+</html>
