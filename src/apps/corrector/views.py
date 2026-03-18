@@ -2,6 +2,7 @@ import csv
 import io
 
 from django.contrib import messages
+from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 
 from .forms import ReferenceUploadForm, SessionUploadForm
@@ -240,5 +241,42 @@ def confirm_all(request, session_id):
 
 
 def session_export(request, session_id):
-    """Stub — implemented in the export task."""
-    return redirect("corrector:session_review", session_id=session_id)
+    session = get_object_or_404(UploadSession, pk=session_id)
+    entries = list(
+        session.entries.select_related(
+            "suggestion__confirmed_reference",
+        ).order_by("row_index")
+    )
+
+    # Collect all extra_data keys across all rows to build a stable header.
+    extra_keys: list[str] = []
+    seen: set[str] = set()
+    for entry in entries:
+        for key in entry.extra_data:
+            if key not in seen:
+                extra_keys.append(key)
+                seen.add(key)
+
+    fieldnames = ["product_name"] + extra_keys + ["product_code"]
+
+    response = HttpResponse(content_type="text/csv")
+    safe_name = session.name.replace('"', "").replace("\n", "") or f"session_{session_id}"
+    response["Content-Disposition"] = f'attachment; filename="{safe_name}_export.csv"'
+
+    writer = csv.DictWriter(response, fieldnames=fieldnames, extrasaction="ignore")
+    writer.writeheader()
+
+    for entry in entries:
+        confirmed_ref = None
+        if hasattr(entry, "suggestion"):
+            confirmed_ref = entry.suggestion.confirmed_reference
+
+        row: dict = {"product_name": entry.product_name}
+        row.update(entry.extra_data)
+        row["product_code"] = confirmed_ref.product_code if confirmed_ref else ""
+        writer.writerow(row)
+
+    session.status = UploadSession.Status.EXPORTED
+    session.save(update_fields=["status"])
+
+    return response
