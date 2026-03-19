@@ -1,13 +1,23 @@
 import csv
 import io
+import unicodedata
 
 from django.contrib import messages
+
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 
 from .forms import ReferenceUploadForm, SessionUploadForm
 from .models import CorrectionSuggestion, RawEntry, ReferenceProduct, UploadSession
 from .utils.matcher import auto_confirm_threshold, find_best_match
+
+def _normalize_cell(value):
+    """Convert to uppercase and remove accents (e.g. é → E)."""
+    if value is None or not isinstance(value, str):
+        return value
+    nfd = unicodedata.normalize("NFD", value.strip())
+    ascii_chars = [c for c in nfd if unicodedata.category(c) != "Mn"]
+    return "".join(ascii_chars).upper()
 
 
 def dashboard(request):
@@ -123,9 +133,9 @@ def session_upload(request):
                         )
 
                         for idx, row in enumerate(rows):
-                            product_name = row.get(product_name_col, "").strip()
+                            product_name = _normalize_cell(row.get(product_name_col, ""))
                             extra = {
-                                lower_map[k]: v
+                                lower_map[k]: _normalize_cell(v)
                                 for k, v in row.items()
                                 if lower_map.get(k) != "product_name"
                             }
