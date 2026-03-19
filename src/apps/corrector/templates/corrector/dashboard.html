@@ -65,6 +65,14 @@
                class="text-xs underline opacity-50 hover:opacity-100 transition">
               Review →
             </a>
+            <form method="post" action="{% url 'corrector:session_delete' session.pk %}"
+                  class="inline ml-2"
+                  onsubmit="return confirm('Delete session “{{ session.name }}”?');">
+              {% csrf_token %}
+              <button type="submit" class="text-xs underline opacity-50 hover:opacity-100 transition text-red-600">
+                Delete
+              </button>
+            </form>
           </td>
         </tr>
         {% endfor %}

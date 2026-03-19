@@ -38,6 +38,17 @@
 </head>
 <body class="bg-surface text-ink min-h-screen">
 
+  {% if messages %}
+  <div class="max-w-5xl mx-auto px-6 pt-6">
+    {% for message in messages %}
+    <div class="mb-4 px-4 py-3 rounded text-sm
+                {% if 'success' in message.tags %}bg-green-50 text-green-800 border border-green-200{% elif 'error' in message.tags %}bg-red-50 text-red-800 border border-red-200{% elif 'warning' in message.tags %}bg-amber-50 text-amber-800 border border-amber-200{% else %}bg-blue-50 text-blue-800 border border-blue-200{% endif %}">
+      {{ message }}
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
   {% block content %}{% endblock %}
 
   {# HTMX #}

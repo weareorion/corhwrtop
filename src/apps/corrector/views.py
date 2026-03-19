@@ -280,3 +280,12 @@ def session_export(request, session_id):
     session.save(update_fields=["status"])
 
     return response
+
+
+def session_delete(request, session_id):
+    session = get_object_or_404(UploadSession, pk=session_id)
+    if request.method == "POST":
+        session.delete()
+        messages.success(request, f"Session “{session.name}” has been deleted.")
+        return redirect("corrector:dashboard")
+    return redirect("corrector:dashboard")

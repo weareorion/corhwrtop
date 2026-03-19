@@ -12,4 +12,5 @@ urlpatterns = [
     path("session/<int:session_id>/confirm/<int:entry_id>/", views.confirm_entry, name="confirm_entry"),
     path("session/<int:session_id>/confirm-all/", views.confirm_all, name="confirm_all"),
     path("session/<int:session_id>/export/", views.session_export, name="session_export"),
+    path("session/<int:session_id>/delete/", views.session_delete, name="session_delete"),
 ]
