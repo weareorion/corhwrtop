@@ -281,7 +281,8 @@ def session_export(request, session_id):
         if hasattr(entry, "suggestion"):
             confirmed_ref = entry.suggestion.confirmed_reference
 
-        row: dict = {"product_name": entry.product_name}
+        corrected_name = confirmed_ref.product_name if confirmed_ref else entry.product_name
+        row: dict = {"product_name": corrected_name}
         row.update(entry.extra_data)
         row["product_code"] = confirmed_ref.product_code if confirmed_ref else ""
         writer.writerow(row)
