@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+
+{% block title %}Reference catalog — CSV Corrector{% endblock %}
+
+{% block content %}
+<div class="max-w-5xl mx-auto px-6 py-10">
+
+  <div class="flex items-start justify-between gap-4 mb-8">
+    <div>
+      <div class="mb-3 text-sm opacity-50">
+        <a href="{% url 'corrector:dashboard' %}" class="hover:opacity-100 transition">Dashboard</a>
+        <span class="mx-1.5">→</span>
+        <span>Reference catalog</span>
+      </div>
+      <h1 class="text-xl font-semibold tracking-tight mb-1">Reference catalog</h1>
+      <p class="text-sm opacity-50">
+        {% if ref_count %}
+          {{ ref_count }} product{{ ref_count|pluralize }} in the catalog (dataset Y). Names are shown as stored; matching uses a normalized form.
+        {% else %}
+          No products loaded yet.
+          <a href="{% url 'corrector:reference_upload' %}" class="underline">Upload a CSV</a> to populate the catalog.
+        {% endif %}
+      </p>
+    </div>
+    <a href="{% url 'corrector:reference_upload' %}"
+       class="shrink-0 inline-flex items-center px-4 py-2 text-sm bg-ink text-white rounded hover:opacity-80 transition">
+      Upload CSV
+    </a>
+  </div>
+
+  {% if ref_count %}
+  <div class="bg-white border border-border rounded overflow-hidden">
+    <table class="w-full text-sm">
+      <thead>
+        <tr class="border-b border-border bg-surface text-xs uppercase tracking-wider opacity-60">
+          <th class="text-left px-5 py-3 font-medium">Code</th>
+          <th class="text-left px-5 py-3 font-medium">Product name</th>
+          <th class="text-left px-5 py-3 font-medium">Added</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for product in page_obj %}
+        <tr class="border-b border-border last:border-0 hover:bg-surface/60 transition">
+          <td class="px-5 py-3 font-mono text-xs opacity-80">{{ product.product_code }}</td>
+          <td class="px-5 py-3">{{ product.product_name }}</td>
+          <td class="px-5 py-3 opacity-50 text-xs">{{ product.created_at|date:"Y-m-d H:i" }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  {% if page_obj.has_other_pages %}
+  <nav class="mt-6 flex items-center justify-between text-sm" aria-label="Catalog pagination">
+    <span class="opacity-50">
+      Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}
+    </span>
+    <div class="flex gap-2">
+      {% if page_obj.has_previous %}
+      <a href="?page={{ page_obj.previous_page_number }}"
+         class="px-3 py-1.5 border border-border rounded bg-white hover:bg-surface transition">Previous</a>
+      {% endif %}
+      {% if page_obj.has_next %}
+      <a href="?page={{ page_obj.next_page_number }}"
+         class="px-3 py-1.5 border border-border rounded bg-white hover:bg-surface transition">Next</a>
+      {% endif %}
+    </div>
+  </nav>
+  {% endif %}
+  {% endif %}
+
+</div>
+{% endblock %}

@@ -6,7 +6,8 @@ app_name = "corrector"
 
 urlpatterns = [
     path("", views.dashboard, name="dashboard"),
-    path("reference/", views.reference_upload, name="reference_upload"),
+    path("reference/", views.reference_catalog, name="reference_catalog"),
+    path("reference/upload/", views.reference_upload, name="reference_upload"),
     path("upload/", views.session_upload, name="session_upload"),
     path("session/<int:session_id>/review/", views.session_review, name="session_review"),
     path("session/<int:session_id>/confirm/<int:entry_id>/", views.confirm_entry, name="confirm_entry"),

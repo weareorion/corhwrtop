@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}Reference Catalog — CSV Corrector{% endblock %}
+{% block title %}Upload reference catalog — CSV Corrector{% endblock %}
 
 {% block content %}
 <div class="max-w-2xl mx-auto px-6 py-10">
@@ -9,10 +9,12 @@
   <div class="mb-8 text-sm opacity-50">
     <a href="{% url 'corrector:dashboard' %}" class="hover:opacity-100 transition">Dashboard</a>
     <span class="mx-1.5">→</span>
-    <span>Reference catalog</span>
+    <a href="{% url 'corrector:reference_catalog' %}" class="hover:opacity-100 transition">Reference catalog</a>
+    <span class="mx-1.5">→</span>
+    <span>Upload CSV</span>
   </div>
 
-  <h1 class="text-xl font-semibold tracking-tight mb-1">Reference catalog</h1>
+  <h1 class="text-xl font-semibold tracking-tight mb-1">Upload reference catalog</h1>
   <p class="text-sm opacity-50 mb-8">
     {% if ref_count %}
       {{ ref_count }} product{{ ref_count|pluralize }} loaded. Upload a new CSV to add or update records.

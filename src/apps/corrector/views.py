@@ -4,6 +4,7 @@ import unicodedata
 
 from django.contrib import messages
 
+from django.core.paginator import Paginator
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 
@@ -25,6 +26,19 @@ def dashboard(request):
     ref_count = ReferenceProduct.objects.count()
     return render(request, "corrector/dashboard.html", {
         "sessions": sessions,
+        "ref_count": ref_count,
+    })
+
+
+def reference_catalog(request):
+    ref_count = ReferenceProduct.objects.count()
+    paginator = Paginator(
+        ReferenceProduct.objects.order_by("product_name"),
+        per_page=50,
+    )
+    page_obj = paginator.get_page(request.GET.get("page"))
+    return render(request, "corrector/reference_catalog.html", {
+        "page_obj": page_obj,
         "ref_count": ref_count,
     })
 
