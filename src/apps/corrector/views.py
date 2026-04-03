@@ -281,7 +281,15 @@ def session_export(request, session_id):
                 extra_keys.append(key)
                 seen.add(key)
 
-    fieldnames = ["product_name"] + extra_keys + ["product_code"]
+    # Place product_code after date and before product_name; preserve remaining column order.
+    layout_extra = [k for k in extra_keys if k != "product_code"]
+    if "date" in layout_extra:
+        idx = layout_extra.index("date")
+        prefix = layout_extra[:idx]
+        suffix = layout_extra[idx + 1 :]
+        fieldnames = prefix + ["date", "product_code", "product_name"] + suffix
+    else:
+        fieldnames = layout_extra + ["product_code", "product_name"]
 
     response = HttpResponse(content_type="text/csv")
     safe_name = session.name.replace('"', "").replace("\n", "") or f"session_{session_id}"
