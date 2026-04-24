@@ -15,6 +15,18 @@
     </span>
   </td>
 
+  {# Confirmed name — set when user applies an override or confirms #}
+  <td class="px-4 py-3 text-sm max-w-xs">
+    {% if suggestion.confirmed_reference %}
+      <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-teal-50 text-teal-700 font-medium truncate max-w-full"
+            title="{{ suggestion.confirmed_reference.product_name }}">
+        {{ suggestion.confirmed_reference.product_name }}
+      </span>
+    {% else %}
+      <span class="opacity-25">—</span>
+    {% endif %}
+  </td>
+
   {# Product code — confirmed takes priority over suggestion #}
   <td class="px-4 py-3 text-xs font-medium whitespace-nowrap">
     {% if suggestion.confirmed_reference %}
