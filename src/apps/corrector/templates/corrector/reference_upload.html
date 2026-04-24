@@ -17,7 +17,7 @@
   <h1 class="text-xl font-semibold tracking-tight mb-1">Upload reference catalog</h1>
   <p class="text-sm opacity-50 mb-8">
     {% if ref_count %}
-      {{ ref_count }} product{{ ref_count|pluralize }} loaded. Upload a new CSV to add or update records.
+      {{ ref_count }} product{{ ref_count|pluralize }} loaded. Uploading a new CSV replaces the entire catalog.
     {% else %}
       No products loaded yet. Upload a CSV to populate the catalog.
     {% endif %}
@@ -53,7 +53,7 @@
 
       <button type="submit"
               class="px-5 py-2 text-sm bg-ink text-white rounded hover:opacity-80 transition">
-        Upload & sync
+        Upload &amp; replace catalog
       </button>
     </form>
   </div>

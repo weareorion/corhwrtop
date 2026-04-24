@@ -65,7 +65,9 @@ def reference_upload(request):
                         "CSV must have 'product_code' and 'product_name' columns.",
                     )
                 else:
-                    created_count = updated_count = skipped_count = 0
+                    # Collect rows: last occurrence wins for duplicate product_code.
+                    by_code = {}
+                    skipped_count = 0
                     for row in reader:
                         norm = {k.strip().lower(): v.strip() for k, v in row.items()}
                         code = norm.get("product_code", "").strip()
@@ -73,29 +75,41 @@ def reference_upload(request):
                         if not code:
                             skipped_count += 1
                             continue
-                        _, was_created = ReferenceProduct.objects.update_or_create(
-                            product_code=code,
-                            defaults={"product_name": name},
-                        )
-                        if was_created:
-                            created_count += 1
-                        else:
-                            updated_count += 1
+                        by_code[code] = name
 
-                    parts = []
-                    if created_count:
-                        parts.append(f"{created_count} added")
-                    if updated_count:
-                        parts.append(f"{updated_count} updated")
-                    if skipped_count:
-                        parts.append(f"{skipped_count} skipped (empty code)")
-                    messages.success(
-                        request,
-                        "Reference catalog updated: " + ", ".join(parts) + "."
-                        if parts
-                        else "Reference catalog unchanged.",
-                    )
-                    return redirect("corrector:reference_upload")
+                    if not by_code:
+                        form.add_error(
+                            "csv_file",
+                            "No rows with a product_code — the catalog was not changed.",
+                        )
+                    else:
+                        ReferenceProduct.objects.all().delete()
+                        ReferenceProduct.objects.bulk_create(
+                            [
+                                ReferenceProduct(
+                                    product_code=code,
+                                    product_name=name,
+                                )
+                                for code, name in by_code.items()
+                            ],
+                            batch_size=500,
+                        )
+                        loaded = len(by_code)
+                        if skipped_count:
+                            messages.success(
+                                request,
+                                f"Reference catalog replaced: {loaded} product"
+                                f"{'s' if loaded != 1 else ''} loaded. "
+                                f"{skipped_count} row{'s' if skipped_count != 1 else ''} "
+                                "skipped (empty product_code).",
+                            )
+                        else:
+                            messages.success(
+                                request,
+                                f"Reference catalog replaced: {loaded} product"
+                                f"{'s' if loaded != 1 else ''} loaded.",
+                            )
+                        return redirect("corrector:reference_upload")
 
         ref_count = ReferenceProduct.objects.count()
 

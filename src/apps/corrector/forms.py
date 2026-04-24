@@ -6,7 +6,7 @@ from .utils.matcher import DEFAULT_THRESHOLD
 class ReferenceUploadForm(forms.Form):
     csv_file = forms.FileField(
         label="Reference CSV",
-        help_text="Must contain 'product_code' and 'product_name' columns.",
+        help_text="Must contain 'product_code' and 'product_name' columns. Replaces the entire catalog.",
         widget=forms.ClearableFileInput(attrs={"accept": ".csv"}),
     )
 
